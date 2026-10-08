@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Альбом воспоминаний</title><link rel="stylesheet" href="demo.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="brand"><div class="brand-mark">♡</div><div><div class="brand-title-row"><h1>Альбом воспоминаний</h1><span class="album-date">25.07.2025</span></div><p>Истории, моменты и фотографии, которые хочется сохранить</p></div></div>
+  <button id="menuOpen" class="header-menu" type="button" aria-expanded="false">☰ <span>Меню</span></button>
+</header>
+
+<div id="menuPopover" class="menu-popover" aria-hidden="true">
+  <div class="menu-popover-head"><div><span class="eyebrow">НАВИГАЦИЯ</span><h3>Меню</h3></div><button id="menuClose" class="menu-close" type="button">×</button></div>
+  <div class="menu-tabs">
+    <button class="menu-tab active" data-panel="album" type="button">▣ <span>Альбом</span></button>
+    <button class="menu-tab" data-panel="favorites" type="button">♥ <span>Любимые фото</span></button>
+    <button class="menu-tab" data-panel="edit" type="button">✎ <span>Редактирование</span></button>
+  </div>
+  <div class="menu-content">
+    <section class="menu-panel active" data-panel-content="album"><p>Все фотографии и категории.</p><button id="menuGoAlbum" class="menu-action" type="button">Перейти к альбому →</button></section>
+    <section class="menu-panel" data-panel-content="favorites"><p>Фотографии, отмеченные сердечком.</p><div id="menuFavoriteList" class="menu-favorite-list"></div><button id="menuGoFavorites" class="menu-action" type="button">Перейти к любимым →</button></section>
+    <section class="menu-panel" data-panel-content="edit">
+      <div class="featured-editor">
+        <div><strong>Любимый момент на главном экране</strong><small>Выберите только одну фотографию.</small></div>
+        <select id="featuredSelect"></select>
+        <button id="saveFeatured" class="menu-action" type="button">Сделать выбранной</button>
+      </div>
+      <div class="edit-form">
+        <label class="upload-box"><span class="upload-title">Фотография</span><input id="photoFile" type="file" accept="image/*"><strong id="fileLabel">Нажмите и выберите фото</strong><small>Поддерживаются JPG, PNG, WEBP и другие изображения</small></label>
+        <label>Название<input id="photoName" maxlength="100" placeholder="Например: Наш вечер"></label>
+        <label>Описание<textarea id="photoDesc" maxlength="500" placeholder="Короткое описание"></textarea></label>
+        <label>Категория<select id="photoCategory"></select></label>
+        <div class="edit-buttons"><button id="savePhoto" class="primary-btn" type="button">＋ Добавить фото</button><button id="addCategoryBtn" class="secondary-btn" type="button">＋ Категория</button></div>
+      </div>
+      <div class="admin-list-wrap"><h4>Управление фотографиями</h4><div id="adminPhotoList" class="admin-list"></div></div>
+    </section>
+  </div>
+</div>
+<div id="menuBackdrop" class="menu-backdrop"></div>
+
+<main>
+<section class="hero"><div><span class="eyebrow">НАШИ МОМЕНТЫ</span><h2>То, что хочется<br><em>пересматривать.</em></h2><p>Ваша личная коллекция фотографий, любимых моментов и маленьких историй.</p><a class="primary-btn" href="#album">Открыть альбом</a></div><div class="hero-card"><div class="hero-photo" id="heroPhoto"><img id="heroPhotoImage" alt=""></div><div class="hero-caption"><span>Избранный момент</span><strong id="heroTitle">Наш вечер</strong></div></div></section>
+<section id="favorites" class="favorites-section"><div class="section-heading"><div><span class="eyebrow">ИЗБРАННОЕ</span><h2>Любимые фото</h2></div><div class="slider-controls"><button id="favPrev" type="button">←</button><button id="favNext" type="button">→</button></div></div><div class="favorite-track-wrap"><div id="favoriteTrack" class="favorite-track"></div></div></section>
+<section id="album" class="album-section"><div class="section-heading album-heading"><div><span class="eyebrow">ВСЕ ФОТОГРАФИИ</span><h2>Альбом</h2></div><select id="sortSelect"><option value="new">Сначала новые</option><option value="old">Сначала старые</option><option value="views">По просмотрам</option></select></div><div class="catalog-bar"><div id="categoryTabs" class="category-tabs"></div><button id="catalogAddCategory" class="category-add" type="button">＋ Добавить категорию</button></div><div id="photoGrid" class="photo-grid"></div></section>
+</main>
+<button id="backToTop" class="back-to-top" type="button" aria-label="Наверх">↑</button>
+<footer><span>Альбом воспоминаний</span><span>Все моменты в одном месте ♡</span></footer>
+
+<div id="photoModal" class="modal hidden"><div class="modal-backdrop" data-close></div><div class="modal-box photo-modal"><button class="close" data-close type="button">×</button><div class="modal-photo-side"><img id="modalImage" alt=""><div class="modal-photo-views" id="modalViews"></div></div><div class="modal-content"><div class="modal-topline"><span id="modalCategory" class="pill"></span></div><h2 id="modalTitle"></h2><p id="modalDescription"></p><div class="modal-actions"><button id="modalFavorite" class="favorite-btn" type="button">♡ Любимое</button></div><div class="comments"><h3>Комментарии</h3><div id="commentList" class="comment-list"></div><form id="commentForm" class="comment-form"><input id="commentAuthor" maxlength="40" placeholder="Ваше имя" required><textarea id="commentText" maxlength="300" placeholder="Оставить комментарий..." required></textarea><button class="primary-btn" type="submit">Добавить комментарий</button></form></div></div></div></div>
+<div id="fullscreenModal" class="modal fullscreen-modal hidden"><div class="fullscreen-photo-box"><button class="close" id="fullscreenClose" type="button">×</button><img id="fullscreenImage" alt=""><div class="fullscreen-stats-badge" id="fullscreenStats"></div><div class="fullscreen-info"><strong id="fullscreenTitle"></strong></div><div class="fullscreen-actions"><button id="fullscreenFavorite" type="button">♡ Любимое</button><button id="fullscreenComment" type="button">Комментарии</button><button id="fullscreenEditFeatured" type="button">Изменить любимый момент</button></div></div></div>
+<div id="featuredPicker" class="modal picker-modal hidden"><div class="modal-backdrop" data-picker-close></div><div class="picker-box"><button class="close" id="pickerClose" type="button">×</button><div class="picker-heading"><span class="eyebrow">ЛЮБИМЫЙ МОМЕНТ</span><h2>Выберите фотографию</h2><p>Нажмите на одну фотографию — она станет главным моментом альбома.</p></div><div id="featuredPickerGrid" class="featured-picker-grid"></div></div></div>
+<script src="demo.js"></script>
+</body></html>
