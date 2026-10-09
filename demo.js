@@ -334,13 +334,14 @@ $('#commentForm').onsubmit = async e => {
 
   if (!author || !text) return;
 
-  const { error } = await supabaseClient
-    .from('comments')
-    .insert({
-      photo_id: selectedPhoto.id,
-      author: author,
-      text: text
-    });
+  
+const { error } = await supabaseClient
+  .from('comments')
+  .insert({
+    photo_id: selectedPhoto.id,
+    author_name: author,
+    text: text
+  });
 
   if (error) {
     console.error('Ошибка сохранения комментария:', error);
