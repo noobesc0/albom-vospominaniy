@@ -81,7 +81,35 @@ function openMenu(panel='album'){const pop=$('#menuPopover');pop.classList.add('
 function closeMenu(){const pop=$('#menuPopover');pop.classList.remove('open');$('#menuBackdrop').classList.remove('open');$('#menuOpen').setAttribute('aria-expanded','false');pop.setAttribute('aria-hidden','true')}
 function setNaturalRatio(url, target){const img=new Image();img.onload=()=>{if(img.naturalWidth&&img.naturalHeight)target.style.aspectRatio=`${img.naturalWidth} / ${img.naturalHeight}`};img.src=url;}
 function renderAll(){renderCategories();renderGrid();renderFavorites();renderMenuFavorites();populateEdit();const featured=photos.find(p=>p.featured)||photos[0];if(featured){const src=photoSrc(featured);const heroImg=$('#heroPhotoImage');heroImg.src=src;heroImg.alt=featured.title;heroImg.onload=()=>{setNaturalRatio(src,$('#heroPhoto'));setNaturalRatio(src,$('.hero-card'))};$('#heroTitle').textContent=featured.title;$('#heroPhoto').onclick=()=>openFullscreen(featured.id)}}
-async function toggleFavorite(id){const p=photos.find(x=>x.id===id);if(!p)return;p.favorite=!p.favorite;await persist();renderAll()}
+
+async function toggleFavorite(id) {
+  const p = photos.find(x => x.id === id);
+  if (!p) return;
+
+  const nextFavorite = !p.favorite;
+
+  const { data, error } = await supabaseClient
+    .from('photos')
+    .update({ is_favorite: nextFavorite })
+    .eq('id', id)
+    .select('id, is_favorite');
+
+  if (error) {
+    console.error('Ошибка сохранения любимого фото:', error);
+    alert('Не удалось сохранить отметку в облаке. Подробности есть в консоли.');
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    console.error('Фотография не обновлена в Supabase:', id);
+    alert('Облако не подтвердило изменение. Возможно, нужно проверить права доступа.');
+    return;
+  }
+
+  p.favorite = nextFavorite;
+  await persist();
+  renderAll();
+}
 function renderComments(){const list=$('#commentList');list.innerHTML=selectedPhoto.comments.length?selectedPhoto.comments.map(c=>`<div class="comment"><strong>${escapeHtml(c.author)}</strong><p>${escapeHtml(c.text)}</p></div>`).join(''):'<div class="muted">Пока нет комментариев. Будьте первым.</div>'}
 async function openPhoto(id){selectedPhoto=photos.find(p=>p.id===id);if(!selectedPhoto)return;selectedPhoto.views++;await persist();$('#modalImage').src=photoSrc(selectedPhoto);$('#modalTitle').textContent=selectedPhoto.title;$('#modalDescription').textContent=selectedPhoto.description;$('#modalCategory').textContent=selectedPhoto.category;$('#modalViews').textContent=`${selectedPhoto.views} просмотров`;$('#modalFavorite').textContent=selectedPhoto.favorite?'♥ Любимое':'♡ Любимое';renderComments();$('#photoModal').classList.remove('hidden');renderGrid();renderFavorites()}
 function renderFeaturedPicker(){const el=$('#featuredPickerGrid');if(!el)return;el.innerHTML=photos.map(p=>`<button class="featured-choice ${p.featured?'selected':''}" data-id="${p.id}" type="button"><span class="featured-choice-image"><img src="${photoSrc(p)}" alt="${escapeHtml(p.title)}"></span><span class="featured-choice-copy"><strong>${escapeHtml(p.title)}</strong><small>${escapeHtml(p.category)} · ${p.views} просмотров</small></span><span class="featured-choice-mark">${p.featured?'✓':''}</span></button>`).join('');$$('#featuredPickerGrid [data-id]').forEach(b=>b.onclick=async()=>{const id=+b.dataset.id;await setFeatured(id);closeFeaturedPicker();openFullscreen(id)});}
