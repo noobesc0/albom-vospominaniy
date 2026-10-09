@@ -1,24 +1,51 @@
 
+
 async function loadCloudPhotos() {
-  const { data, error } = await supabaseClient
+  const { data: photoData, error: photoError } = await supabaseClient
     .from("photos")
     .select("*")
     .order("created_at", { ascending: false });
 
-  if (error) {
-    console.error("Ошибка загрузки фотографий:", error);
+  if (photoError) {
+    console.error("Ошибка загрузки фотографий:", photoError);
     return [];
   }
 
-  return (data || []).map((photo) => ({
+  const { data: commentData, error: commentError } = await supabaseClient
+    .from("comments")
+    .select("id, photo_id, author_name, text, created_at")
+    .order("created_at", { ascending: true });
+
+  if (commentError) {
+    console.error("Ошибка загрузки комментариев:", commentError);
+  }
+
+  const commentsByPhoto = {};
+
+  (commentData || []).forEach((comment) => {
+    const key = String(comment.photo_id);
+
+    if (!commentsByPhoto[key]) {
+      commentsByPhoto[key] = [];
+    }
+
+    commentsByPhoto[key].push({
+      id: comment.id,
+      author: comment.author_name || "Гость",
+      text: comment.text,
+      created_at: comment.created_at
+    });
+  });
+
+  return (photoData || []).map((photo) => ({
     id: photo.id,
     title: photo.title || "",
     description: photo.description || "",
     src: photo.image_url || "",
-    views: photo.views || 0,
+    views: Number(photo.views || 0),
     favorite: Boolean(photo.is_favorite),
     featured: Boolean(photo.is_featured),
-    comments: []
+    comments: commentsByPhoto[String(photo.id)] || []
   }));
 }
 
