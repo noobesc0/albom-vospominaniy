@@ -803,3 +803,20 @@ body{background:var(--pastel-bg)!important;color:var(--pastel-ink)!important}
     overflow-wrap: anywhere;
   }
 }
+
+/* Блокируем прокрутку страницы при открытом меню */
+body.menu-open {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.menu-popover {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.menu-popover.open {
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+}
