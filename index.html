@@ -55,6 +55,13 @@
 <script>
   console.log("Supabase library:", typeof window.supabase);
   console.log("Supabase client:", typeof supabaseClient);
+  supabaseClient
+    .from("photos")
+    .select("id")
+    .limit(1)
+    .then(({ data, error }) => {
+      console.log("Supabase database test:", { data, error });
+    });
 </script>
 <script src="demo.js"></script>
 </body></html>
