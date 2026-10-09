@@ -306,12 +306,15 @@ async function addPhoto() {
     if (categoryError) throw categoryError;
 
     if (categoryRow) {
-      const { error: linkError } = await supabaseClient
-        .from('photo_categories')
-        .insert({
-          photo_id: photo.id,
-          category_id: categoryRow.id
-        });
+     
+const { error: linkError } = await supabaseClient
+  .from('photo_catigories')
+  .insert({
+    photo_id: photo.id,
+    category_id: categoryRow.id
+  });
+
+if (linkError) throw linkError;
 
       if (linkError) throw linkError;
     }
