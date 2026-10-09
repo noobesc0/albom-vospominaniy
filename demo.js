@@ -308,7 +308,7 @@ async function addPhoto() {
     if (categoryRow) {
      
 const { error: linkError } = await supabaseClient
-  .from('photo_catigories')
+  .from('photo_categories')
   .insert({
     photo_id: photo.id,
     category_id: categoryRow.id
