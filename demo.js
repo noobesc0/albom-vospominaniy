@@ -323,8 +323,38 @@ $('#saveFeatured').onclick = async () => {
 };async function addCategory(){const name=prompt('Название новой категории:');if(!name||!name.trim())return;const clean=name.trim();if(categories.includes(clean)){alert('Такая категория уже существует.');return}categories.push(clean);await persist();activeCategory=clean;renderAll();setMenuPanel('edit')}
 $('#addCategoryBtn').onclick=addCategory;$('#catalogAddCategory').onclick=addCategory;$('#sortSelect').onchange=renderGrid;$('#favPrev').onclick=()=>{favOffset--;updateFavPosition()};$('#favNext').onclick=()=>{favOffset++;updateFavPosition()};
 $('#modalImage').onclick=()=>selectedPhoto&&openFullscreen(selectedPhoto.id);$('#fullscreenClose').onclick=closeFullscreen;$('#fullscreenEditFeatured').onclick=()=>openFeaturedPicker();$('#pickerClose').onclick=closeFeaturedPicker;$$('[data-picker-close]').forEach(el=>el.onclick=closeFeaturedPicker);$('#fullscreenFavorite').onclick=async()=>{if(selectedPhoto){selectedPhoto.favorite=!selectedPhoto.favorite;await persist();$('#fullscreenFavorite').textContent=selectedPhoto.favorite?'♥ Любимое':'♡ Любимое';renderAll()}};$('#fullscreenComment').onclick=()=>{closeFullscreen();if(selectedPhoto)openPhoto(selectedPhoto.id)};$('#modalFavorite').onclick=async()=>{if(selectedPhoto){selectedPhoto.favorite=!selectedPhoto.favorite;await persist();$('#modalFavorite').textContent=selectedPhoto.favorite?'♥ Любимое':'♡ Любимое';renderAll()}};
-$('#commentForm').onsubmit=async e=>{e.preventDefault();if(!selectedPhoto)return;const author=$('#commentAuthor').value.trim(),text=$('#commentText').value.trim();if(!author||!text)return;selectedPhoto.comments.push({author,text});await persist();$('#commentForm').reset();renderComments();renderGrid();renderFavorites()};
-$$('[data-close]').forEach(el=>el.onclick=()=>{closePhotoModal();document.body.classList.remove('modal-open')});window.addEventListener('resize',updateFavPosition);
+
+$('#commentForm').onsubmit = async e => {
+  e.preventDefault();
+
+  if (!selectedPhoto) return;
+
+  const author = $('#commentAuthor').value.trim();
+  const text = $('#commentText').value.trim();
+
+  if (!author || !text) return;
+
+  const { error } = await supabaseClient
+    .from('comments')
+    .insert({
+      photo_id: selectedPhoto.id,
+      author: author,
+      text: text
+    });
+
+  if (error) {
+    console.error('Ошибка сохранения комментария:', error);
+    alert('Не удалось сохранить комментарий в облаке.');
+    return;
+  }
+
+  selectedPhoto.comments.push({ author, text });
+
+  $('#commentForm').reset();
+  renderComments();
+  renderGrid();
+  renderFavorites();
+};$$('[data-close]').forEach(el=>el.onclick=()=>{closePhotoModal();document.body.classList.remove('modal-open')});window.addEventListener('resize',updateFavPosition);
 const backToTop=$('#backToTop');
 function updateBackToTop(){backToTop.classList.toggle('visible',window.scrollY>420)}
 window.addEventListener('scroll',updateBackToTop,{passive:true});
