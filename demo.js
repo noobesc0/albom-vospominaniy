@@ -153,8 +153,20 @@ async function openPhoto(id) {
   selectedPhoto = photos.find(p => String(p.id) === String(id));
   if (!selectedPhoto) return;
 
-  selectedPhoto.views++;
-  await persist();
+ 
+  const newViews = Number(selectedPhoto.views || 0) + 1;
+
+  const { error: viewsError } = await supabaseClient
+    .from('photos')
+    .update({ views: newViews })
+    .eq('id', selectedPhoto.id);
+
+  if (viewsError) {
+    console.error('Ошибка сохранения просмотров:', viewsError);
+  } else {
+    selectedPhoto.views = newViews;
+    await persist();
+  }
 
   const { data, error } = await supabaseClient
     .from('comments')
