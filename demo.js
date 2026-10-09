@@ -74,8 +74,163 @@ function renderGrid(){const el=$('#photoGrid');el.innerHTML=sorted().map(p=>`<ar
 function renderFavorites(){const fav=photos.filter(p=>p.favorite),track=$('#favoriteTrack');track.innerHTML=fav.map(p=>`<article class="favorite-card" data-id="${p.id}"><img src="${photoSrc(p)}" alt="${escapeHtml(p.title)}"><div class="fav-info"><strong>${escapeHtml(p.title)}</strong><small>${p.views} просмотров · ${p.comments.length} комментариев</small></div></article>`).join('')||'<div class="empty-state">Пока нет любимых фотографий.</div>'; $$('#favoriteTrack .favorite-card').forEach(c=>c.onclick=()=>openPhoto(c.dataset.id));updateFavPosition()}
 function updateFavPosition(){const track=$('#favoriteTrack'),card=track.querySelector('.favorite-card');if(!card){track.style.transform='none';return}const step=card.offsetWidth+18,visible=Math.max(1,Math.floor(track.parentElement.offsetWidth/step)),max=Math.max(0,photos.filter(p=>p.favorite).length-visible);favOffset=Math.max(0,Math.min(favOffset,max));track.style.transform=`translateX(-${favOffset*step}px)`}
 function renderMenuFavorites(){const el=$('#menuFavoriteList'),fav=photos.filter(p=>p.favorite);el.innerHTML=fav.length?fav.map(p=>`<button class="menu-fav-item" data-id="${p.id}" type="button"><img src="${photoSrc(p)}"><span>${escapeHtml(p.title)}</span></button>`).join(''):'<div class="muted">Пока нет любимых фотографий.</div>';$$('#menuFavoriteList [data-id]').forEach(b=>b.onclick=()=>{closeMenu();openPhoto(+b.dataset.id)})}
-function populateEdit(){const sel=$('#photoCategory');sel.innerHTML=categories.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');const featuredSel=$('#featuredSelect');if(featuredSel){featuredSel.innerHTML=photos.map(p=>`<option value="${p.id}" ${p.featured?'selected':''}>${escapeHtml(p.title)}</option>`).join('')}const list=$('#adminPhotoList');list.innerHTML=photos.map(p=>`<div class="admin-item"><img src="${photoSrc(p)}"><div class="admin-item-main"><strong>${escapeHtml(p.title)}</strong><small>${escapeHtml(p.category)}</small></div><button type="button" data-feature="${p.id}" title="Сделать любимым моментом">${p.featured?'★':'☆'}</button><button type="button" data-edit="${p.id}">Изменить</button><button type="button" data-delete="${p.id}">Удалить</button></div>`).join('');$$('#adminPhotoList [data-delete]').forEach(b=>b.onclick=async()=>{if(confirm('Удалить фотографию?')){const id=+b.dataset.delete;photos=photos.filter(p=>p.id!==id);if(!photos.some(p=>p.featured)&&photos[0])photos[0].featured=true;await persist();renderAll()}});$$('#adminPhotoList [data-feature]').forEach(b=>b.onclick=async()=>{await setFeatured(+b.dataset.feature)});$$('#adminPhotoList [data-edit]').forEach(b=>b.onclick=async()=>{const p=photos.find(x=>x.id===+b.dataset.edit);if(!p)return;const title=prompt('Название:',p.title);if(title===null)return;const desc=prompt('Описание:',p.description);if(desc===null)return;let cat=prompt('Категория:',p.category);if(cat===null)return;cat=cat.trim()||p.category;p.title=title.trim()||p.title;p.description=desc.trim();p.category=cat;if(!categories.includes(cat))categories.push(cat);await persist();renderAll();setMenuPanel('edit')})}
 
+function populateEdit() {
+  const sel = $('#photoCategory');
+  sel.innerHTML = categories.map(c =>
+    `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`
+  ).join('');
+
+  const featuredSel = $('#featuredSelect');
+  if (featuredSel) {
+    featuredSel.innerHTML = photos.map(p =>
+      `<option value="${p.id}" ${p.featured ? 'selected' : ''}>${escapeHtml(p.title)}</option>`
+    ).join('');
+  }
+
+  const list = $('#adminPhotoList');
+  list.innerHTML = photos.map(p =>
+    `<div class="admin-item">
+      <img src="${photoSrc(p)}">
+      <div class="admin-item-main">
+        <strong>${escapeHtml(p.title)}</strong>
+        <small>${escapeHtml(p.category || 'Без категории')}</small>
+      </div>
+      <button type="button" data-feature="${p.id}" title="Сделать любимым моментом">${p.featured ? '★' : '☆'}</button>
+      <button type="button" data-edit="${p.id}">Изменить</button>
+      <button type="button" data-delete="${p.id}">Удалить</button>
+    </div>`
+  ).join('');
+
+  $$('#adminPhotoList [data-delete]').forEach(b => {
+    b.onclick = async () => {
+      if (!confirm('Удалить фотографию? Это действие нельзя отменить.')) return;
+
+      const id = b.dataset.delete;
+      const photo = photos.find(p => String(p.id) === String(id));
+      if (!photo) return;
+
+      b.disabled = true;
+
+      try {
+        if (!window.supabaseClient) {
+          throw new Error('Нет подключения к Supabase.');
+        }
+
+        const { data: authData, error: authError } =
+          await supabaseClient.auth.getUser();
+
+        if (authError || !authData.user) {
+          throw new Error('Сначала войдите в аккаунт редактора.');
+        }
+
+        const { data: profile, error: profileError } =
+          await supabaseClient
+            .from('profiles')
+            .select('role')
+            .eq('id', authData.user.id)
+            .maybeSingle();
+
+        if (profileError) throw profileError;
+
+        if (!profile || !['owner', 'editor'].includes(profile.role)) {
+          throw new Error('У аккаунта нет прав на удаление.');
+        }
+
+        const { error: linksError } = await supabaseClient
+          .from('photo_categories')
+          .delete()
+          .eq('photo_id', id);
+
+        if (linksError) throw linksError;
+
+        const { error: commentsError } = await supabaseClient
+          .from('comments')
+          .delete()
+          .eq('photo_id', id);
+
+        if (commentsError) throw commentsError;
+
+        const { data: photoRow, error: readError } =
+          await supabaseClient
+            .from('photos')
+            .select('storage_path')
+            .eq('id', id)
+            .single();
+
+        if (readError) throw readError;
+
+        const { error: deleteError } = await supabaseClient
+          .from('photos')
+          .delete()
+          .eq('id', id);
+
+        if (deleteError) throw deleteError;
+
+        photos = photos.filter(p => String(p.id) !== String(id));
+
+        if (!photos.some(p => p.featured) && photos[0]) {
+          photos[0].featured = true;
+          await setFeatured(photos[0].id);
+        }
+
+        renderAll();
+
+        if (photoRow.storage_path) {
+          const { error: storageError } = await supabaseClient.storage
+            .from('photos')
+            .remove([photoRow.storage_path]);
+
+          if (storageError) {
+            console.error('Ошибка удаления файла из Storage:', storageError);
+            alert('Запись удалена, но файл в облачном хранилище остался.');
+            return;
+          }
+        }
+
+        alert('Фотография удалена.');
+      } catch (error) {
+        console.error('Ошибка удаления фотографии:', error);
+        alert('Не удалось удалить фотографию: ' + (error.message || error));
+      } finally {
+        b.disabled = false;
+      }
+    };
+  });
+
+  $$('#adminPhotoList [data-feature]').forEach(b => {
+    b.onclick = async () => {
+      await setFeatured(b.dataset.feature);
+    };
+  });
+
+  $$('#adminPhotoList [data-edit]').forEach(b => {
+    b.onclick = async () => {
+      const p = photos.find(x => String(x.id) === String(b.dataset.edit));
+      if (!p) return;
+
+      const title = prompt('Название:', p.title);
+      if (title === null) return;
+
+      const desc = prompt('Описание:', p.description);
+      if (desc === null) return;
+
+      let cat = prompt('Категория:', p.category || '');
+      if (cat === null) return;
+
+      cat = cat.trim() || p.category;
+      p.title = title.trim() || p.title;
+      p.description = desc.trim();
+      p.category = cat;
+
+      if (!categories.includes(cat)) categories.push(cat);
+
+      await persist();
+      renderAll();
+      setMenuPanel('edit');
+    };
+  });
+}
 async function setFeatured(id) {
   const p = photos.find(x => String(x.id) === String(id));
   if (!p) {
