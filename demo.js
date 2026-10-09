@@ -275,8 +275,8 @@ async function setFeatured(id) {
   renderAll();
   setMenuPanel('edit');
 }function setMenuPanel(panel){$$('.menu-tab').forEach(b=>b.classList.toggle('active',b.dataset.panel===panel));$$('.menu-panel').forEach(p=>p.classList.toggle('active',p.dataset.panelContent===panel));if(panel==='edit')populateEdit();if(panel==='favorites')renderMenuFavorites()}
-function openMenu(panel='album'){const pop=$('#menuPopover');pop.classList.add('open');$('#menuBackdrop').classList.add('open');$('#menuOpen').setAttribute('aria-expanded','true');pop.setAttribute('aria-hidden','false');setMenuPanel(panel)}
-function closeMenu(){const pop=$('#menuPopover');pop.classList.remove('open');$('#menuBackdrop').classList.remove('open');$('#menuOpen').setAttribute('aria-expanded','false');pop.setAttribute('aria-hidden','true')}
+function openMenu(panel='album'){const pop=$('#menuPopover');pop.classList.add('open');document.body.classList.add('menu-open');$('#menuBackdrop').classList.add('open');$('#menuOpen').setAttribute('aria-expanded','true');pop.setAttribute('aria-hidden','false');setMenuPanel(panel)}
+function closeMenu(){const pop=$('#menuPopover');pop.classList.remove('open');document.body.classList.remove('menu-open');$('#menuBackdrop').classList.remove('open');$('#menuOpen').setAttribute('aria-expanded','false');pop.setAttribute('aria-hidden','true')}
 function setNaturalRatio(url, target){const img=new Image();img.onload=()=>{if(img.naturalWidth&&img.naturalHeight)target.style.aspectRatio=`${img.naturalWidth} / ${img.naturalHeight}`};img.src=url;}
 function renderAll(){renderCategories();renderGrid();renderFavorites();renderMenuFavorites();populateEdit();const featured=photos.find(p=>p.featured)||photos[0];if(featured){const src=photoSrc(featured);const heroImg=$('#heroPhotoImage');heroImg.src=src;heroImg.alt=featured.title;heroImg.onload=()=>{setNaturalRatio(src,$('#heroPhoto'));setNaturalRatio(src,$('.hero-card'))};$('#heroTitle').textContent=featured.title;$('#heroPhoto').onclick=()=>openFullscreen(featured.id)}}
 
