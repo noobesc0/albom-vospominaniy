@@ -821,13 +821,15 @@ body.menu-open {
   touch-action: pan-y;
 }
 
-/* Аккуратный заголовок на узких экранах */
+/* Заголовок первого экрана на узких телефонах */
 @media (max-width: 400px) {
-  h1 {
-    font-size: clamp(24px, 7vw, 30px);
-    line-height: 1.2;
-    overflow-wrap: normal;
-    word-break: normal;
-    hyphens: none;
+  .hero h2 {
+    font-size: clamp(25px, 7.2vw, 29px);
+    line-height: 1.25;
+    letter-spacing: -0.04em;
+  }
+
+  .hero h2 em {
+    white-space: nowrap;
   }
 }
