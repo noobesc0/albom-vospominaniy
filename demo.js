@@ -91,7 +91,165 @@ function openFullscreen(id){const p=photos.find(x=>x.id===id);if(!p)return;selec
 function closeFullscreen(){$('#fullscreenModal').classList.add('hidden')}
 function closePhotoModal(){$('#photoModal').classList.add('hidden')}
 function makePreview(file){return new Promise((resolve,reject)=>{const r=new FileReader();r.onerror=()=>reject(new Error('read'));r.onload=()=>{const img=new Image();img.onload=()=>{const max=1800,scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));const c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.naturalWidth*scale));c.height=Math.max(1,Math.round(img.naturalHeight*scale));const ctx=c.getContext('2d');ctx.drawImage(img,0,0,c.width,c.height);resolve(c.toDataURL('image/jpeg',.82))};img.onerror=()=>reject(new Error('image'));img.src=r.result};r.readAsDataURL(file)})}
-async function addPhoto(){const file=$('#photoFile').files[0];if(!file){alert('Сначала выберите фотографию.');return}if(!file.type.startsWith('image/')){alert('Можно добавить только изображение.');return}const btn=$('#savePhoto');btn.disabled=true;btn.textContent='Сохраняем…';try{const src=await makePreview(file),cat=$('#photoCategory').value||categories[0]||'Без категории';photos.push({id:Date.now(),title:$('#photoName').value.trim()||'Новая фотография',description:$('#photoDesc').value.trim(),category:cat,views:0,favorite:false,featured:false,src,comments:[]});if(!(await persist()))throw new Error('storage');$('#photoFile').value='';$('#fileLabel').textContent='Нажмите и выберите фото';$('#photoName').value='';$('#photoDesc').value='';renderAll();setMenuPanel('edit');alert('Фотография успешно добавлена в альбом!')}catch(e){photos.pop();alert('Не удалось сохранить фотографию. Попробуйте другое изображение или меньший файл.')}finally{btn.disabled=false;btn.textContent='＋ Добавить фото'}}
+
+async function addPhoto() {
+  const file = $('#photoFile').files[0];
+
+  if (!file) {
+    alert('Сначала выберите фотографию.');
+    return;
+  }
+
+  if (!file.type.startsWith('image/')) {
+    alert('Можно добавить только изображение.');
+    return;
+  }
+
+  if (!window.albumCloud || !window.supabaseClient) {
+    alert('Не удалось подключиться к облаку. Обновите страницу.');
+    return;
+  }
+
+  const btn = $('#savePhoto');
+  btn.disabled = true;
+  btn.textContent = 'Сохраняем…';
+
+  let uploadedPath = null;
+  let insertedPhotoId = null;
+
+  try {
+    const { data: authData, error: authError } =
+      await supabaseClient.auth.getUser();
+
+    if (authError || !authData.user) {
+      throw new Error('Сначала войдите в аккаунт редактора.');
+    }
+
+    const { data: profile, error: profileError } =
+      await supabaseClient
+        .from('profiles')
+        .select('role')
+        .eq('id', authData.user.id)
+        .maybeSingle();
+
+    if (profileError) throw profileError;
+
+    if (!profile || !['owner', 'editor'].includes(profile.role)) {
+      throw new Error('У этого аккаунта нет прав редактирования.');
+    }
+
+    const title = $('#photoName').value.trim() || 'Новая фотография';
+    const description = $('#photoDesc').value.trim();
+    const category = $('#photoCategory').value || categories[0] || 'Без категории';
+
+    const fileExt = (file.name.split('.').pop() || 'jpg')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '') || 'jpg';
+
+    const uniquePath =
+      `${authData.user.id}/${Date.now()}-${crypto.randomUUID()}.${fileExt}`;
+
+    const { error: uploadError } = await supabaseClient.storage
+      .from('photos')
+      .upload(uniquePath, file, {
+        cacheControl: '3600',
+        upsert: false,
+        contentType: file.type
+      });
+
+    if (uploadError) throw uploadError;
+    uploadedPath = uniquePath;
+
+    const { data: publicData } = supabaseClient.storage
+      .from('photos')
+      .getPublicUrl(uniquePath);
+
+    const imageUrl = publicData.publicUrl;
+
+    const { data: photo, error: insertError } = await supabaseClient
+      .from('photos')
+      .insert({
+        title,
+        description,
+        image_url: imageUrl,
+        storage_path: uniquePath,
+        views: 0,
+        is_favorite: false,
+        is_featured: false
+      })
+      .select()
+      .single();
+
+    if (insertError) throw insertError;
+    insertedPhotoId = photo.id;
+
+    const { data: categoryRow, error: categoryError } =
+      await supabaseClient
+        .from('categories')
+        .select('id')
+        .eq('name', category)
+        .maybeSingle();
+
+    if (categoryError) throw categoryError;
+
+    if (categoryRow) {
+      const { error: linkError } = await supabaseClient
+        .from('photo_categories')
+        .insert({
+          photo_id: photo.id,
+          category_id: categoryRow.id
+        });
+
+      if (linkError) throw linkError;
+    }
+
+    const { data: cloudPhotos, error: reloadError } =
+      await supabaseClient
+        .from('photos')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (reloadError) throw reloadError;
+
+    photos = (cloudPhotos || []).map(p => ({
+      id: p.id,
+      title: p.title || '',
+      description: p.description || '',
+      src: p.image_url || '',
+      views: Number(p.views) || 0,
+      favorite: Boolean(p.is_favorite),
+      featured: Boolean(p.is_featured),
+      comments: []
+    }));
+
+    $('#photoFile').value = '';
+    $('#fileLabel').textContent = 'Нажмите и выберите фото';
+    $('#photoName').value = '';
+    $('#photoDesc').value = '';
+
+    renderAll();
+    setMenuPanel('edit');
+    alert('Фотография сохранена в облако!');
+  } catch (error) {
+    console.error('Ошибка сохранения фотографии:', error);
+
+    if (insertedPhotoId) {
+      await supabaseClient.from('photos').delete().eq('id', insertedPhotoId);
+    }
+
+    if (uploadedPath) {
+      await supabaseClient.storage.from('photos').remove([uploadedPath]);
+    }
+
+    alert(
+      error.message ||
+      'Не удалось сохранить фотографию. Проверьте права Supabase и настройки Storage.'
+    );
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '＋ Добавить фото';
+  }
+}
 $('#menuOpen').onclick=()=>openMenu('album');$('#menuClose').onclick=closeMenu;$('#menuBackdrop').onclick=closeMenu;$$('.menu-tab').forEach(b=>b.onclick=()=>setMenuPanel(b.dataset.panel));$('#menuGoAlbum').onclick=()=>{closeMenu();$('#album').scrollIntoView({behavior:'smooth',block:'start'})};$('#menuGoFavorites').onclick=()=>{closeMenu();$('#favorites').scrollIntoView({behavior:'smooth',block:'start'})};
 $('#savePhoto').onclick=addPhoto;$('#saveFeatured').onclick=async()=>{const id=Number($('#featuredSelect').value);if(id)await setFeatured(id)};$('#photoFile').onchange=()=>{const f=$('#photoFile').files[0];$('#fileLabel').textContent=f?`Выбрано: ${f.name}`:'Нажмите и выберите фото'};
 async function addCategory(){const name=prompt('Название новой категории:');if(!name||!name.trim())return;const clean=name.trim();if(categories.includes(clean)){alert('Такая категория уже существует.');return}categories.push(clean);await persist();activeCategory=clean;renderAll();setMenuPanel('edit')}
