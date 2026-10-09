@@ -411,3 +411,14 @@ backToTop.onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
 updateBackToTop();
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeMenu();closePhotoModal();closeFullscreen();closeFeaturedPicker()}});document.addEventListener('click',e=>{if($('#menuPopover').classList.contains('open')&&!e.target.closest('#menuPopover')&&!e.target.closest('#menuOpen'))closeMenu()});
 loadState();
+
+const photoFileInput = $('#photoFile');
+const fileLabel = $('#fileLabel');
+
+photoFileInput.addEventListener('change', () => {
+  const file = photoFileInput.files[0];
+
+  fileLabel.textContent = file
+    ? file.name
+    : 'Нажмите и выберите фото';
+});
