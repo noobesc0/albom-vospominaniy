@@ -422,3 +422,4 @@ photoFileInput.addEventListener('change', () => {
     ? file.name
     : 'Нажмите и выберите фото';
 });
+$('#savePhoto').addEventListener('click', addPhoto);
