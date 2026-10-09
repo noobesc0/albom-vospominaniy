@@ -20,7 +20,7 @@ async function loadCloudPhotos() {
   }
 
   const { data: links, error: linksError } = await supabaseClient
-    .from("photo_catigories")
+    .from("photo_categories")
     .select("photo_id, category_id");
 
   if (linksError) {
