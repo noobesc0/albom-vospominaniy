@@ -1,5 +1,4 @@
 
-
 async function loadCloudPhotos() {
   const { data: photoData, error: photoError } = await supabaseClient
     .from("photos")
@@ -20,6 +19,22 @@ async function loadCloudPhotos() {
     console.error("Ошибка загрузки комментариев:", commentError);
   }
 
+  const { data: links, error: linksError } = await supabaseClient
+    .from("photo_catigories")
+    .select("photo_id, category_id");
+
+  if (linksError) {
+    console.error("Ошибка загрузки связей категорий:", linksError);
+  }
+
+  const { data: categoryData, error: categoryError } = await supabaseClient
+    .from("categories")
+    .select("id, name");
+
+  if (categoryError) {
+    console.error("Ошибка загрузки названий категорий:", categoryError);
+  }
+
   const commentsByPhoto = {};
 
   (commentData || []).forEach((comment) => {
@@ -37,6 +52,23 @@ async function loadCloudPhotos() {
     });
   });
 
+  const categoryNames = {};
+
+  (categoryData || []).forEach((category) => {
+    categoryNames[String(category.id)] = category.name;
+  });
+
+  const categoryByPhoto = {};
+
+  (links || []).forEach((link) => {
+    const photoId = String(link.photo_id);
+    const categoryName = categoryNames[String(link.category_id)];
+
+    if (categoryName && !categoryByPhoto[photoId]) {
+      categoryByPhoto[photoId] = categoryName;
+    }
+  });
+
   return (photoData || []).map((photo) => ({
     id: photo.id,
     title: photo.title || "",
@@ -45,6 +77,7 @@ async function loadCloudPhotos() {
     views: Number(photo.views || 0),
     favorite: Boolean(photo.is_favorite),
     featured: Boolean(photo.is_featured),
+    category: categoryByPhoto[String(photo.id)] || "Без категории",
     comments: commentsByPhoto[String(photo.id)] || []
   }));
 }
