@@ -16,7 +16,57 @@ function openDB(){return new Promise((resolve,reject)=>{if(!('indexedDB' in wind
 function dbGet(key){return new Promise((resolve,reject)=>{if(!db)return resolve(null);const r=db.transaction(STORE,'readonly').objectStore(STORE).get(key);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
 function dbSet(key,value){return new Promise((resolve,reject)=>{if(!db)return resolve(false);const r=db.transaction(STORE,'readwrite').objectStore(STORE).put(value,key);r.onsuccess=()=>resolve(true);r.onerror=()=>reject(r.error)})}
 async function persist(){try{if(db){await dbSet('photos',photos);await dbSet('categories',categories);return true}localStorage.setItem('albumPhotosV6',JSON.stringify(photos));localStorage.setItem('albumCategoriesV6',JSON.stringify(categories));return true}catch(e){return false}}
-async function loadState(){try{db=await openDB()}catch(e){db=null}try{const p=db?await dbGet('photos'):JSON.parse(localStorage.getItem('albumPhotosV6')||'null');const c=db?await dbGet('categories'):JSON.parse(localStorage.getItem('albumCategoriesV6')||'null');photos=Array.isArray(p)?p:clone(seedPhotos);categories=Array.isArray(c)?c:clone(seedCategories)}catch(e){photos=clone(seedPhotos);categories=clone(seedCategories)}photos=photos.map(p=>({...p,comments:Array.isArray(p.comments)?p.comments:[],views:Number(p.views)||0}));renderAll();}
+
+async function loadState() {
+  try {
+    db = await openDB();
+  } catch (e) {
+    db = null;
+  }
+  try {
+    let cloudPhotos = [];
+    let cloudCategories = [];
+
+    if (window.albumCloud) {
+      [cloudPhotos, cloudCategories] = await Promise.all([
+        window.albumCloud.loadPhotos(),
+        window.albumCloud.loadCategories()
+      ]);
+    }
+    if (cloudPhotos.length > 0) {
+      photos = cloudPhotos;
+      categories = cloudCategories.length
+        ? cloudCategories
+        : clone(seedCategories);
+    } else {
+      const p = db
+        ? await dbGet("photos")
+        : JSON.parse(localStorage.getItem("albumPhotosV6") || "null");
+      const c = db
+        ? await dbGet("categories")
+        : JSON.parse(localStorage.getItem("albumCategoriesV6") || "null");
+      photos = Array.isArray(p) ? p : clone(seedPhotos);
+      categories = Array.isArray(c) ? c : clone(seedCategories);
+    }
+  } catch (e) {
+    console.error("Ошибка загрузки альбома:", e);
+    const p = db
+      ? await dbGet("photos")
+      : JSON.parse(localStorage.getItem("albumPhotosV6") || "null");
+
+    const c = db
+      ? await dbGet("categories")
+      : JSON.parse(localStorage.getItem("albumCategoriesV6") || "null");
+    photos = Array.isArray(p) ? p : clone(seedPhotos);
+    categories = Array.isArray(c) ? c : clone(seedCategories);
+  }
+  photos = photos.map(p => ({
+    ...p,
+    comments: Array.isArray(p.comments) ? p.comments : [],
+    views: Number(p.views) || 0
+  }));
+  renderAll();
+}
 function photoSrc(p){return p.src||''}
 function sorted(){let arr=[...photos],sort=$('#sortSelect').value;if(sort==='new')arr.sort((a,b)=>b.id-a.id);if(sort==='old')arr.sort((a,b)=>a.id-b.id);if(sort==='views')arr.sort((a,b)=>b.views-a.views);if(activeCategory!=='Все')arr=arr.filter(p=>p.category===activeCategory);return arr}
 function renderCategories(){const el=$('#categoryTabs');el.innerHTML=['Все',...categories].map(c=>`<button class="category-tab ${activeCategory===c?'active':''}" data-cat="${escapeHtml(c)}" type="button">${escapeHtml(c)}</button>`).join('');$$('#categoryTabs [data-cat]').forEach(b=>b.onclick=()=>{activeCategory=b.dataset.cat;renderGrid();renderCategories()})}
