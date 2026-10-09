@@ -63,9 +63,41 @@ async function loadCloudCategories() {
   return (data || []).map((category) => category.name);
 }
 
+async function saveCloudCategories(categories) {
+  const { data: existing, error: readError } = await supabaseClient
+    .from("categories")
+    .select("name");
+
+  if (readError) {
+    console.error("Ошибка чтения категорий:", readError);
+    throw readError;
+  }
+
+  const existingNames = new Set(
+    (existing || []).map((category) => category.name)
+  );
+
+  const newNames = [...new Set(categories.map((name) => name.trim()))]
+    .filter((name) => name && !existingNames.has(name));
+
+  if (newNames.length === 0) return true;
+
+  const { error } = await supabaseClient
+    .from("categories")
+    .insert(newNames.map((name) => ({ name })));
+
+  if (error) {
+    console.error("Ошибка сохранения категорий:", error);
+    throw error;
+  }
+
+  return true;
+}
+
 window.albumCloud = {
   loadPhotos: loadCloudPhotos,
-  loadCategories: loadCloudCategories
+  loadCategories: loadCloudCategories,
+  saveCategories: saveCloudCategories
 };
 
 let albumCurrentRole = null;
