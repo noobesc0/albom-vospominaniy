@@ -774,3 +774,32 @@ body{background:var(--pastel-bg)!important;color:var(--pastel-ink)!important}
 /* v17 — album date next to the title */
 .brand-title-row{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}.album-date{font-size:12px;letter-spacing:.08em;color:#fff;font-weight:600;white-space:nowrap;opacity:.95}.brand-title-row h1{margin:0}
 @media(max-width:560px){.brand-title-row{gap:8px}.album-date{font-size:10px}.brand p{margin-top:3px}}
+
+/* Исправление ширины сайта на телефонах */
+@media (max-width: 600px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: clip;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  img,
+  video {
+    max-width: 100%;
+  }
+
+  h1,
+  h2,
+  h3,
+  p,
+  a,
+  button {
+    overflow-wrap: anywhere;
+  }
+}
