@@ -17,6 +17,23 @@
     <button class="menu-tab" data-panel="favorites" type="button">♥ <span>Любимые фото</span></button>
     <button class="menu-tab" data-panel="edit" type="button">✎ <span>Редактирование</span></button>
   </div>
+
+  <section id="authPanel" style="padding: 14px 18px; border-bottom: 1px solid rgba(255,255,255,.15);">
+    <strong id="authTitle">Вход для редакторов</strong>
+    <p id="authMessage" style="font-size:13px; margin:6px 0 12px;">Войдите, чтобы добавлять и редактировать фотографии.</p>
+    <form id="loginForm">
+      <label style="display:block; margin-bottom:10px;">
+        Электронная почта
+        <input id="loginEmail" type="email" autocomplete="username" required placeholder="Ваш email" style="display:block; width:100%; box-sizing:border-box; margin-top:5px;">
+      </label>
+      <label style="display:block; margin-bottom:10px;">
+        Пароль
+        <input id="loginPassword" type="password" autocomplete="current-password" required placeholder="Ваш пароль" style="display:block; width:100%; box-sizing:border-box; margin-top:5px;">
+      </label>
+      <button id="loginButton" class="primary-btn" type="submit">Войти</button>
+      <button id="logoutButton" class="secondary-btn" type="button" hidden>Выйти</button>
+    </form>
+  </section>
   <div class="menu-content">
     <section class="menu-panel active" data-panel-content="album"><p>Все фотографии и категории.</p><button id="menuGoAlbum" class="menu-action" type="button">Перейти к альбому →</button></section>
     <section class="menu-panel" data-panel-content="favorites"><p>Фотографии, отмеченные сердечком.</p><div id="menuFavoriteList" class="menu-favorite-list"></div><button id="menuGoFavorites" class="menu-action" type="button">Перейти к любимым →</button></section>
