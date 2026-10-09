@@ -165,7 +165,13 @@ function populateEdit() {
           .delete()
           .eq('id', id);
 
-        if (deleteError) throw deleteError;
+       
+if (deleteError) throw deleteError;
+
+if (window.albumCloud?.removeEmptyCategories) {
+  await window.albumCloud.removeEmptyCategories();
+  categories = await window.albumCloud.loadCategories();
+}
 
         photos = photos.filter(p => String(p.id) !== String(id));
 
