@@ -126,11 +126,45 @@ async function saveCloudCategories(categories) {
 
   return true;
 }
+async function removeEmptyCloudCategories() {
+  const { data: categories, error: categoriesError } =
+    await supabaseClient
+      .from("categories")
+      .select("id, name");
 
+  if (categoriesError) throw categoriesError;
+
+  const { data: links, error: linksError } =
+    await supabaseClient
+      .from("photo_categories")
+      .select("category_id");
+
+  if (linksError) throw linksError;
+
+  const usedIds = new Set(
+    (links || []).map(link => String(link.category_id))
+  );
+
+  const emptyCategories = (categories || []).filter(
+    category => !usedIds.has(String(category.id))
+  );
+
+  for (const category of emptyCategories) {
+    const { error } = await supabaseClient
+      .from("categories")
+      .delete()
+      .eq("id", category.id);
+
+    if (error) throw error;
+  }
+
+  return true;
+}
 window.albumCloud = {
   loadPhotos: loadCloudPhotos,
   loadCategories: loadCloudCategories,
-  saveCategories: saveCloudCategories
+  saveCategories: saveCloudCategories,
+  removeEmptyCategories: removeEmptyCloudCategories
 };
 
 let albumCurrentRole = null;
